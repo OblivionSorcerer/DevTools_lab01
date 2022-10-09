@@ -16,20 +16,20 @@ namespace StackTests
         }
         //These tests check IsEmpty 
         [Fact]
-        public void TestIsEmptyShouldBeTrueWhenStackIsNew()
+        public void IsEmptyShouldBeTrueWhenStackIsNew()
         {
             Stack<int> stackCards = new Stack<int>(5);
             Assert.True(stackCards.IsEmpty);
         }
         [Fact]
-        public void TestIsEmptyShouldBeFalseAfterPush()
+        public void IsEmptyShouldBeFalseAfterPush()
         {
             var stackCards = new Stack<int>(5);
             stackCards.Push(1);
             Assert.False(stackCards.IsEmpty);
         }
         [Fact]
-        public void TestIsEmptyShouldBeTrueAfterPushThenPop()
+        public void IsEmptyShouldBeTrueAfterPushThenPop()
         {
             var stackCards = new Stack<int>(6);
             stackCards.Push(5);
@@ -38,13 +38,13 @@ namespace StackTests
         }
         //These tests check IsFull
         [Fact]
-        public void TestIsFullShouldBeFalseWhenStackIsNew()
+        public void IsFullShouldBeFalseWhenStackIsNew()
         {
             Stack<int> stackCards = new Stack<int>(5);
             Assert.False(stackCards.IsFull);
         }
         [Fact]
-        public void TestPushWhenIsFullShouldBeTrue()
+        public void PushWhenIsFullShouldBeTrue()
         {
             Stack<int> stackCard = new Stack<int>(2);
             stackCard.Push(2);
@@ -55,21 +55,21 @@ namespace StackTests
         }
         //This test checks Count
         [Fact]
-        public void TestCountShouldBeZeroWhenStackIsNew()
+        public void CountShouldBeZeroWhenStackIsNew()
         {
             Stack<int> stackCard = new Stack<int>(2);
             Assert.Equal(0, stackCard.Count);
         }
         //These tests check Push
         [Fact]
-        public void TestPushAndCountAfterPush()
+        public void PushAndCountAfterPush()
         {
             Stack<int> stackCard = new Stack<int>(2);
             stackCard.Push(43);
             Assert.Equal(1, stackCard.Count);
         }
         [Fact]
-        public void TestPushWhenStackIsFull()
+        public void PushWhenStackIsFull()
         {
             Stack<int> stackCard = new Stack<int>(2);
             stackCard.Push(2);
@@ -80,14 +80,14 @@ namespace StackTests
         }
         //These tests check Top()
         [Fact]
-        public void TestTop()
+        public void TopShouldBeTheSameAsLastPushedElement()
         {
             Stack<string> stackCard = new Stack<string>(2);
             stackCard.Push("Hello");
             Assert.Equal("Hello", stackCard.Top());
         }
         [Fact]
-        public void TestTopAfterPop()
+        public void TopShouldBeThePreviousPushedElementAfterPop()
         {
             Stack<string> stackCard = new Stack<string>(2);
             stackCard.Push("Hello");
@@ -96,7 +96,7 @@ namespace StackTests
             Assert.Equal("Hello", stackCard.Top());
         }
         [Fact]
-        public void TestTopWhenStackIsEmpty()
+        public void TopWhenStackIsEmpty()
         {
             Stack<int> stackCard = new Stack<int>(2);
             Action act = () => stackCard.Top();
@@ -105,7 +105,7 @@ namespace StackTests
         }
         //These tests check Pop()
         [Fact]
-        public void TestPop()
+        public void PoppedElementShouldBeAsLastPushedElement()
         {
             Stack<int> stackCard = new Stack<int>(2);
             stackCard.Push(2);
@@ -114,7 +114,7 @@ namespace StackTests
             Assert.Equal(2, stackCard.Top());
         }
         [Fact]
-        public void TestPopWhenStackIsEmpty()
+        public void PopWhenStackIsEmpty()
         {
             Stack<int> stackCard = new Stack<int>(2);
             Action act = () => stackCard.Pop();
@@ -123,7 +123,7 @@ namespace StackTests
         }
         //Test Foreach
         [Fact]
-        public void TestForEach()
+        public void ForEachShouldBeAbleEnumerateElementsFromTopToBottom()
         {
             int counter = 3;
             Stack<int> stackCard = new Stack<int>(counter);
