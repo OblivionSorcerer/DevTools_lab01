@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32901.215
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerCollections", "PowerCollections\PowerCollections.csproj", "{6107D969-BC4A-45D0-915F-3CDBB0EC1C57}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerCollections", "PowerCollections\PowerCollections.csproj", "{6107D969-BC4A-45D0-915F-3CDBB0EC1C57}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerCollections.Tests", "PowerCollections.Tests\PowerCollections.Tests.csproj", "{3500C460-951F-45C6-AC29-77B5F9128015}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerCollections.Tests", "PowerCollections.Tests\PowerCollections.Tests.csproj", "{3500C460-951F-45C6-AC29-77B5F9128015}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StackTests", "D:\1Языки\C#\Stack\StackOverFlow\StackTests\StackTests.csproj", "{B7E52BDB-7646-4116-8C8A-7BC52F0C9C60}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{3500C460-951F-45C6-AC29-77B5F9128015}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3500C460-951F-45C6-AC29-77B5F9128015}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3500C460-951F-45C6-AC29-77B5F9128015}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7E52BDB-7646-4116-8C8A-7BC52F0C9C60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7E52BDB-7646-4116-8C8A-7BC52F0C9C60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7E52BDB-7646-4116-8C8A-7BC52F0C9C60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7E52BDB-7646-4116-8C8A-7BC52F0C9C60}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
