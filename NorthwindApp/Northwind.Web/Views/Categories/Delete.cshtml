@@ -11,23 +11,23 @@
 <div>
     <h4>Категория "@Model.CategoryName"</h4>
     <hr />
-    <dl class="row">
+    <dl class="row" data-tid="category-cont">
         <dt class = "col-sm-2">
             @Html.DisplayNameFor(model => model.CategoryName)
         </dt>
-        <dd class = "col-sm-10">
+        <dd class="col-sm-10" data-tid="category-name">
             @Html.DisplayFor(model => model.CategoryName)
         </dd>
         <dt class = "col-sm-2">
             @Html.DisplayNameFor(model => model.Description)
         </dt>
-        <dd class = "col-sm-10">
+        <dd class="col-sm-10" data-tid="category-description">
             @Html.DisplayFor(model => model.Description)
         </dd>
         <dt class = "col-sm-2">
             @Html.DisplayNameFor(model => model.Picture)
         </dt>
-        <dd class = "col-sm-10">
+        <dd class="col-sm-10" data-tid="category-picture">
             <img src="@Url.Action("Image", new { Id = Model.CategoryId })" width="100" />
         </dd>
     </dl>
@@ -46,7 +46,7 @@
         <p class="fs-4 fw-bold">Продукты (@Model.Products.Count()):</p>
         foreach (var product in Model.Products)
         {
-            <p class="fs-5 font-monospace border-bottom">
+            <p class="fs-5 font-monospace border-bottom" data-tid="product-name">
                 @Html.DisplayFor(productName => product.ProductName)
             </p>
         }

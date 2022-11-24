@@ -36,14 +36,14 @@
                 <td data-tid="category-description">
                     @Html.DisplayFor(modelItem => item.Description)
                 </td>
-                <td data-tid="category-products">
+                <td data-tid="category-product-list">
                     @{
                         if (item.Products.Count != 0)
                         {
                             <p class="fs-5 ">Всего: (@item.Products.Count())</p>
                             foreach (var product in item.Products.Take(3))
                             {
-                                <p class="fs-6 font-monospace border-bottom">
+                                <p class="fs-6 font-monospace border-bottom" data-tid="product-name">
                                     @Html.DisplayFor(productName => product.ProductName)
                                 </p>
                             }
