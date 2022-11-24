@@ -19,9 +19,11 @@
                 @Html.DisplayNameFor(model => model.Description)
             </th>
             <th>
+                @Html.DisplayNameFor(model => model.Products)
+            </th>
+            <th>
                 @Html.DisplayNameFor(model => model.Picture)
             </th>
-            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -33,6 +35,24 @@
                 </td>
                 <td data-tid="category-description">
                     @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td data-tid="category-products">
+                    @{
+                        if (item.Products.Count != 0)
+                        {
+                            <p class="fs-5 ">Всего: (@item.Products.Count())</p>
+                            foreach (var product in item.Products.Take(3))
+                            {
+                                <p class="fs-6 font-monospace border-bottom">
+                                    @Html.DisplayFor(productName => product.ProductName)
+                                </p>
+                            }
+                        }
+                        else
+                        {
+                            <p class="fs-4 fw-bold">Продуктов не найдено</p>
+                        }
+                    }
                 </td>
                 <td data-tid="category-picture">
                     <img src="@Url.Action("Image", new { Id = item.CategoryId })" width="100" />
