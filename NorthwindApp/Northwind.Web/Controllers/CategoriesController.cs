@@ -137,7 +137,9 @@ namespace Northwind.Web.Controllers
                 
                 if (haveProducts) 
                 {
-                    ModelState.AddModelError("", "Нельзя удалять категории с привязанными товарами!");
+                    category.Products = await context.Products.Where(p => p.CategoryId == id).ToListAsync();
+                    ModelState.AddModelError("", "Нельзя удалять категории с привязанными товарами!\n" +
+                       $"К категеории {category.CategoryName} привязано несколько товаров: ({category.Products.Count})");
                     return View(category.ToViewModel());
                 }
                 context.Categories.Remove(category);
