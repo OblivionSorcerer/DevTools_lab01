@@ -18,10 +18,8 @@ namespace Northwind.Web.Tests
     {
         HttpClient client = new() { BaseAddress = new Uri("http://localhost:5000") };
 
-        NorthwindContext context = new(
-            new DbContextOptionsBuilder<NorthwindContext>()
-            .UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=Northwind;" +
-            "Trusted_Connection=True;MultipleActiveResultSets=true").Options);
+
+        TestInstanceCategory currentCategory = new TestInstanceCategory();
 
         [TestMethod]
         public async Task Create_ShouldReturnView_WithEmptyForm_And_WithLinks()
@@ -46,9 +44,8 @@ namespace Northwind.Web.Tests
         [TestMethod]
         public async Task Delete_ShouldReturnView_WithCategoryInfo_And_WithProductList_And_WithLinks_WhenIdIsValid()
         {
-            var currentCategory = context.Categories.Include(c => c.Products).First();
 
-            var response = await client.GetStringAsync($"/categories/delete/{currentCategory.CategoryId}");
+            var response = await client.GetStringAsync($"/categories/delete/1");
             var document = GetDocument(response);
 
             var category = GetCategory(document);
@@ -59,9 +56,8 @@ namespace Northwind.Web.Tests
 
             category.Should().BeEquivalentTo(currentCategory,
                 options => options
-                    .Excluding(c => c.CategoryId)
-                    .Excluding(c => c.Products)
-                    .Excluding(c => c.Picture));
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
 
             products.Should().BeEquivalentTo(currentCategory.Products,
                 options => options
@@ -89,10 +85,9 @@ namespace Northwind.Web.Tests
         [TestMethod]
         public async Task Details_ShouldReturnView_With_CategoryInfo_And_ProductList_And_Links_WhenIdIsValid()
         {
-            var currentCategory = context.Categories.Include(c => c.Products).First();
 
             var response = await client
-                .GetStringAsync($"/categories/Details/{currentCategory.CategoryId}");
+                .GetStringAsync($"/categories/Details/1");
 
             var document = GetDocument(response);
 
@@ -103,9 +98,8 @@ namespace Northwind.Web.Tests
 
             category.Should().BeEquivalentTo(currentCategory,
                 options => options
-                    .Excluding(c => c.CategoryId)
-                    .Excluding(c => c.Products)
-                    .Excluding(c => c.Picture));
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
 
             products.Should().BeEquivalentTo(currentCategory.Products,
                 options => options
@@ -133,10 +127,9 @@ namespace Northwind.Web.Tests
         [TestMethod]
         public async Task Edit_ShouldReturnView_WithFilledFieldsOfForm_And_Links_WhenIdIsValid()
         {
-            var currentCategory = context.Categories.First();
 
             var response = await client
-                .GetStringAsync($"/categories/edit/{currentCategory.CategoryId}");
+                .GetStringAsync($"/categories/edit/1");
 
             var document = GetDocument(response);
             var category = GetCategoryFromDocument(document);
@@ -145,9 +138,9 @@ namespace Northwind.Web.Tests
 
             category.Should().BeEquivalentTo(currentCategory,
                 options => options
-                    .Excluding(c => c.CategoryId)
-                    .Excluding(c => c.Products)
-                    .Excluding(c => c.Picture));
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
+
 
             links.Count().Should().Be(2);
         }
@@ -166,36 +159,6 @@ namespace Northwind.Web.Tests
             var response = await client.GetAsync("/categories/Edit/");
 
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
-        }
-
-        [TestMethod]
-        public async Task Index_ShouldReturnView_WithFirstThreeProducts()
-        {
-            var currentCategory = context.Categories.Include(c => c.Products.Take(3));
-
-            var response = await client.GetStringAsync("/categories");
-            var document = GetDocument(response);
-
-            var categories = GetCategories(document).ToList();
-            var products = GetProducts(document);
-            var links = document.Links.OfType<IHtmlAnchorElement>()
-                .Select(l => l.Href)
-                .Where(h => h.Contains("Categories/"))
-                .ToList();
-
-            categories.Should().BeEquivalentTo(currentCategory,
-                options => options
-                    .Excluding(c => c.Products)
-                    .Excluding(c => c.Picture));
-
-            products.Take(3).Should().BeEquivalentTo(currentCategory.First().Products,
-                options => options
-                .Including(p => p.ProductName));
-
-            links.Where(l => l.EndsWith("Create")).Count().Should().Be(1);
-            links.Where(l => l.Contains("Edit")).Count().Should().Be(categories.Count);
-            links.Where(l => l.Contains("Details")).Count().Should().Be(categories.Count);
-            links.Where(l => l.Contains("Delete")).Count().Should().Be(categories.Count);
         }
 
         [TestMethod]
