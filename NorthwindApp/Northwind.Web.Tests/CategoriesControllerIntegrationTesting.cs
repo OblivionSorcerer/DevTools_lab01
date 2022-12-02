@@ -8,6 +8,7 @@ using FluentAssertions;
 using Northwind.Web.Tests.TestDataGenerators;
 using Microsoft.EntityFrameworkCore;
 using System;
+using NuGet.Protocol;
 
 namespace Northwind.Web.Tests
 {
@@ -140,6 +141,9 @@ namespace Northwind.Web.Tests
 
             var response = await client.PostAsync("/categories/create", formContent);
 
+            var error = GetResultError;
+
+            error.Should().NotBeNull();
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
             response.Headers.Location.Should().BeNull();
         }
@@ -157,6 +161,18 @@ namespace Northwind.Web.Tests
             var categoryId = context.Categories.First().CategoryId;
             var response = await client.GetAsync($"/categories/details/{categoryId}");
 
+            var responseToHTML = await client
+                .GetStringAsync($"/categories/Details/{categoryId}");
+
+            var document = GetDocument(responseToHTML);
+
+            var categoryFromHTML = GetCategory(document);
+            var products = GetProducts(document);
+
+            categoryFromHTML.Should().BeEquivalentTo(category,
+                options => options
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
         }
         [TestMethod]
@@ -236,7 +252,9 @@ namespace Northwind.Web.Tests
             multipartContent.Add(new ByteArrayContent(category.Picture), "Picture", "picture.jpg");
 
             var response = await client.PostAsync($"/categories/edit/{category.CategoryId}", multipartContent);
+            var error = GetResultError;
 
+            error.Should().NotBeNull();
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK); 
             context.Categories.First().Should().BeEquivalentTo(category);
         }
@@ -275,6 +293,17 @@ namespace Northwind.Web.Tests
             var deleteForm = await client.GetStringAsync($"/categories/delete/{category.CategoryId}");
             var verificationToken = GetRequestVerificationToken(deleteForm);
 
+
+            var document = GetDocument(deleteForm);
+
+            var categoryFromHTML = GetCategory(document);
+            var products = GetProducts(document);
+
+            categoryFromHTML.Should().BeEquivalentTo(category,
+                options => options
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
+
             var deleteRequest = new FormUrlEncodedContent(
                 new Dictionary<string, string>
                 {
@@ -303,6 +332,15 @@ namespace Northwind.Web.Tests
 
             var deleteForm = await client.GetStringAsync($"/categories/delete/{category.CategoryId}");
             var verificationToken = GetRequestVerificationToken(deleteForm);
+            var document = GetDocument(deleteForm);
+
+            var categoryFromHTML = GetCategory(document);
+            var products = GetProducts(document);
+
+            categoryFromHTML.Should().BeEquivalentTo(category,
+                options => options
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
 
             var deleteRequest = new FormUrlEncodedContent(
                 new Dictionary<string, string>
@@ -415,7 +453,15 @@ namespace Northwind.Web.Tests
                 .QuerySelector($"input[name='{AspNetVerificationTokenName}']")?
                 .GetAttribute("value") ?? "";
         }
+        private static IElement GetResultError(string htmlSource)
+        {
+            var context = BrowsingContext.New(Configuration.Default);
+            var document = context.OpenAsync(req => req.Content(htmlSource)).Result;
 
+            var error = document.QuerySelector("div[class*='validation-summary-errors']");
+
+            return error;
+        }
 
         private static IEnumerable<Category> GetResultCategories(string htmlSource)
         {
@@ -436,6 +482,64 @@ namespace Northwind.Web.Tests
                     Picture = null,
                 };
             }
+        }
+        private static IDocument GetDocument(string htmlSource)
+        {
+            return BrowsingContext.New(Configuration.Default)
+                .OpenAsync(req => req.Content(htmlSource)).Result;
+        }
+
+        private static IEnumerable<Category> GetCategories(IDocument document)
+        {
+            foreach (var categoryRow in document.QuerySelectorAll("tr[data-tid|='category-row']"))
+            {
+                var id = categoryRow.GetAttribute("data-tid")?.Split("-").Last();
+                var name = categoryRow.QuerySelector("td[data-tid='category-name']")?.Text().Trim();
+                var description = categoryRow.QuerySelector("td[data-tid='category-description']")?.Text().Trim();
+
+                yield return new Category
+                {
+                    CategoryId = int.Parse(id ?? "-1"),
+                    CategoryName = name ?? string.Empty,
+                    Description = description,
+                    Picture = null
+                };
+            }
+        }
+
+        private static IEnumerable<Product> GetProducts(IDocument document)
+        {
+            foreach (var product in document.QuerySelectorAll("p[data-tid|='product-name']"))
+            {
+                yield return new Product
+                {
+                    ProductName = product.Text().Trim() ?? string.Empty
+                };
+            }
+        }
+
+        private static Category GetCategory(IDocument document)
+        {
+            return new Category
+            {
+                CategoryName = document.QuerySelector("dd[data-tid='category-name']")?
+                    .Text().Trim() ?? string.Empty,
+                Description = document.QuerySelector("dd[data-tid=\"category-description\"]")?
+                    .Text().Trim(),
+                Picture = null,
+            };
+        }
+
+        private static Category GetCategoryFromDocument(IDocument document)
+        {
+            return new Category
+            {
+                CategoryName = document.QuerySelector("input[data-tid='category-name']")?
+                    .GetAttribute("value")?.Trim() ?? string.Empty,
+                Description = document.QuerySelector("input[data-tid='category-description']")?
+                    .GetAttribute("value")?.Trim(),
+                Picture = null
+            };
         }
     }
 }
