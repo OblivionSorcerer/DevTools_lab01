@@ -7,6 +7,8 @@ using AngleSharp.Dom;
 using FluentAssertions;
 using Northwind.Web.Tests.TestDataGenerators;
 using Microsoft.EntityFrameworkCore;
+using System;
+using NuGet.Protocol;
 
 namespace Northwind.Web.Tests
 {
@@ -118,29 +120,328 @@ namespace Northwind.Web.Tests
                     .Including(c => c.Description)
                     .Including(c => c.Picture));
         }
+        [TestMethod]
+        public async Task Create_AddNewCategory_WithoutName_AsUrlEncodedForm_And_NotRedirectToList()
+        {
+
+            var context = NorthwindContextHelpers.GetInMemoryContext(true);
+            var category = new CategoryGenerator().Generate();
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var createForm = await client.GetStringAsync("/categories/create");
+            var verificationToken = GetRequestVerificationToken(createForm);
+            var formContent = new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    [nameof(Category.CategoryName)] = "",
+                    [AspNetVerificationTokenName] = verificationToken,
+                });
+
+            var response = await client.PostAsync("/categories/create", formContent);
+
+            var error = GetResultError;
+
+            error.Should().NotBeNull();
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+            response.Headers.Location.Should().BeNull();
+        }
+        [TestMethod]
+        public async Task Details_GetDetailsOfCategory_And_RedirectToDetails()
+        {
+            var context = NorthwindContextHelpers.GetInMemoryContext(true);
+            var categoryGenerator = new CategoryGenerator(context);
+            var category = categoryGenerator.Generate();
+            context.SaveChanges();
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var categoryId = context.Categories.First().CategoryId;
+            var response = await client.GetAsync($"/categories/details/{categoryId}");
+
+            var responseToHTML = await client
+                .GetStringAsync($"/categories/Details/{categoryId}");
+
+            var document = GetDocument(responseToHTML);
+
+            var categoryFromHTML = GetCategory(document);
+            var products = GetProducts(document);
+
+            categoryFromHTML.Should().BeEquivalentTo(category,
+                options => options
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        }
+        [TestMethod]
+        public async Task Details_GetDetailsOfNotExistingCategory_And_RedirectToNotFoundPage()
+        {
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var response = await client.GetAsync($"/categories/details/-1");
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+        [TestMethod]
+        public async Task Details_GetDetailsOfCategory_WithoutId_And_RedirectToNotFoundPage()
+        {
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var response = await client.GetAsync($"/categories/details");
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+        [TestMethod]
+        public async Task Edit_ChangeExistingCategory_WithValidData_AsMultipartForm_And_RedirectToList()
+        {
+            var context = NorthwindContextHelpers.GetInMemoryContext(true);
+            var categoryGenerator = new CategoryGenerator(context);
+            var category = categoryGenerator.Generate();
+            context.SaveChanges();
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var editForm = await client.GetStringAsync($"/categories/edit/{category.CategoryId}");
+            var verificationToken = GetRequestVerificationToken(editForm);
+
+            var multipartContent = new MultipartFormDataContent();
+            multipartContent.Add(new StringContent(category.CategoryId.ToString()), nameof(category.CategoryId));
+            multipartContent.Add(new StringContent(category.CategoryName), nameof(Category.CategoryName));
+            multipartContent.Add(new StringContent(category.Description), nameof(Category.Description));
+            multipartContent.Add(new StringContent(verificationToken), AspNetVerificationTokenName);
+            multipartContent.Add(new ByteArrayContent(category.Picture), "Picture", "picture.jpg");
+
+            var response = await client.PostAsync($"/categories/edit/{category.CategoryId}", multipartContent);
+            context = NorthwindContextHelpers.GetInMemoryContext();
+            var editedCategory = context.Categories.First();
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.Redirect);
+            response.Headers.Location.Should().Be("/Categories");
+            editedCategory.Should().BeEquivalentTo(category,
+                options => options
+                .Including(c => c.CategoryName)
+                .Including(c => c.Description)
+                .Including(c => c.Picture));
+        }
+
+        [TestMethod]
+        public async Task Edit_ChangeExistingCategory_WithInvalidName_AsMultipartForm_And_NotRedirectToList()
+        {
+            var context = NorthwindContextHelpers.GetInMemoryContext(true);
+            var categoryGenerator = new CategoryGenerator(context);
+            var category = categoryGenerator.Generate();
+            context.SaveChanges();
+
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var editForm = await client.GetStringAsync($"/categories/edit/{category.CategoryId}");
+            var verificationToken = GetRequestVerificationToken(editForm);
+
+            var multipartContent = new MultipartFormDataContent();
+            multipartContent.Add(new StringContent(category.CategoryId.ToString()), nameof(category.CategoryId));
+            multipartContent.Add(new StringContent(""), nameof(Category.CategoryName));
+            multipartContent.Add(new StringContent(category.Description), nameof(Category.Description));
+            multipartContent.Add(new StringContent(verificationToken), AspNetVerificationTokenName);
+            multipartContent.Add(new ByteArrayContent(category.Picture), "Picture", "picture.jpg");
+
+            var response = await client.PostAsync($"/categories/edit/{category.CategoryId}", multipartContent);
+            var error = GetResultError;
+
+            error.Should().NotBeNull();
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK); 
+            context.Categories.First().Should().BeEquivalentTo(category);
+        }
+        [TestMethod]
+        public async Task Edit_ChangeNotExistingCategory_And_RedirectToNotFoundPage()
+        {
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var response = await client.GetAsync($"/categories/edit/-1");
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+        [TestMethod]
+        public async Task Edit_ChangeCategory_WithoutId_And_RedirectToNotFoundPage()
+        {
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            var response = await client.GetAsync("/categories/edit");
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+        [TestMethod]
+        public async Task Delete_RemoveExistingCategory_WithoutProducts_AsUrlEncodedForm_And_RedirectToList()
+        {
+            var context = NorthwindContextHelpers.GetInMemoryContext(true);
+            var categoryGenerator = new CategoryGenerator(context);
+            var category = categoryGenerator.Generate();
+            context.SaveChanges();
+
+
+            var categoriesCount = context.Categories.Count();
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var deleteForm = await client.GetStringAsync($"/categories/delete/{category.CategoryId}");
+            var verificationToken = GetRequestVerificationToken(deleteForm);
+
+
+            var document = GetDocument(deleteForm);
+
+            var categoryFromHTML = GetCategory(document);
+            var products = GetProducts(document);
+
+            categoryFromHTML.Should().BeEquivalentTo(category,
+                options => options
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
+
+            var deleteRequest = new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    [nameof(Category.CategoryId)] = category.CategoryId.ToString(),
+                    [AspNetVerificationTokenName] = verificationToken
+                });
+
+            var response = await client.PostAsync($"/categories/delete/{category.CategoryId}", deleteRequest);
+            context = NorthwindContextHelpers.GetInMemoryContext();
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.Redirect);
+            response.Headers.Location.Should().Be("/Categories");
+            context.Categories.Should().BeEmpty();
+        }
+        [TestMethod]
+        public async Task Delete_RemoveExistingCategory_WithProducts_AsUrlEncodedForm_And_NotRedirectToList()
+        {
+            var context = NorthwindContextHelpers.GetInMemoryContext(true);
+            var categoryGenerator = new CategoryGenerator(context).WithProduct(new ProductGenerator(context), 3);
+            var category = categoryGenerator.Generate();
+            context.SaveChanges();
+
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var deleteForm = await client.GetStringAsync($"/categories/delete/{category.CategoryId}");
+            var verificationToken = GetRequestVerificationToken(deleteForm);
+            var document = GetDocument(deleteForm);
+
+            var categoryFromHTML = GetCategory(document);
+            var products = GetProducts(document);
+
+            categoryFromHTML.Should().BeEquivalentTo(category,
+                options => options
+                    .Including(c => c.CategoryName)
+                    .Including(c => c.Description));
+
+            var deleteRequest = new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    [nameof(Category.CategoryId)] = category.CategoryId.ToString(),
+                    [AspNetVerificationTokenName] = verificationToken
+                });
+
+            var response = await client.PostAsync($"/categories/delete/{category.CategoryId}", deleteRequest);
+            context = NorthwindContextHelpers.GetInMemoryContext();
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+            context.Categories.First().Should().BeEquivalentTo(category,
+                options => options
+                .Excluding(c => c.Products));
+        }
+
+        [TestMethod]
+        public async Task Delete_RemoveNotExistingCategory_And_RedirectToNotFoundPage()
+        {
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var categoryId = -1;
+
+            var response = await client.GetAsync($"/categories/delete/{categoryId}");
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+
+        [TestMethod]
+        public async Task Delete_RemoveCategory_WithoutId_And_RedirectToNotFoundPage()
+        {
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var response = await client.GetAsync($"/categories/delete");
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+
+        [TestMethod]
+        public async Task Image_GetImageOfCategory_ExistingImage_And_RedirectToPicture()
+        {
+            var context = NorthwindContextHelpers.GetInMemoryContext(true);
+            var categoryGenerator = new CategoryGenerator(context);
+            var category = categoryGenerator.Generate();
+            context.SaveChanges();
+
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var response = await client.GetAsync($"/categories/image/{category.CategoryId}");
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+            var result = await response.Content.ReadAsByteArrayAsync();
+            result.Should().BeEquivalentTo(category.Picture);
+        }
+
+        [TestMethod]
+        public async Task Image_GetImageOfCategory_WithoutImage_And_RedirectToNotFoundPage()
+        {
+            var context = NorthwindContextHelpers.GetInMemoryContext(true);
+            var categoryGenerator = new CategoryGenerator(context);
+            var category = categoryGenerator.Generate();
+            category.Picture = null;
+            context.SaveChanges();
+
+
+            var client = GetTestHttpClient(() => NorthwindContextHelpers.GetInMemoryContext(),
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var response = await client.GetAsync($"/categories/image/{category.CategoryId}");
+
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
 
         private static HttpClient GetTestHttpClient(
             Func<NorthwindContext>? context = null,
             WebApplicationFactoryClientOptions? clientOptions = null
             )
         {
-            var factory = new WebApplicationFactory<Program>();
-            if (context != null)
+        var factory = new WebApplicationFactory<Program>();
+        if (context != null)
+        {
+            factory = factory.WithWebHostBuilder(builder =>
             {
-                factory = factory.WithWebHostBuilder(builder =>
+                builder.ConfigureServices(services =>
                 {
-                    builder.ConfigureServices(services =>
-                    {
-                        services.AddScoped<NorthwindContext>(services => context());
-                    });
+                    services.AddScoped<NorthwindContext>(services => context());
                 });
-            }
+            });
+        }
 
-            var client = clientOptions != null
-                ? factory.CreateClient(clientOptions)
-                : factory.CreateClient();
+        var client = clientOptions != null
+            ? factory.CreateClient(clientOptions)
+            : factory.CreateClient();
 
-            return client;
+        return client;
         }
         
         private static string GetRequestVerificationToken(string htmlSource)
@@ -152,7 +453,15 @@ namespace Northwind.Web.Tests
                 .QuerySelector($"input[name='{AspNetVerificationTokenName}']")?
                 .GetAttribute("value") ?? "";
         }
+        private static IElement GetResultError(string htmlSource)
+        {
+            var context = BrowsingContext.New(Configuration.Default);
+            var document = context.OpenAsync(req => req.Content(htmlSource)).Result;
 
+            var error = document.QuerySelector("div[class*='validation-summary-errors']");
+
+            return error;
+        }
 
         private static IEnumerable<Category> GetResultCategories(string htmlSource)
         {
@@ -173,6 +482,64 @@ namespace Northwind.Web.Tests
                     Picture = null,
                 };
             }
+        }
+        private static IDocument GetDocument(string htmlSource)
+        {
+            return BrowsingContext.New(Configuration.Default)
+                .OpenAsync(req => req.Content(htmlSource)).Result;
+        }
+
+        private static IEnumerable<Category> GetCategories(IDocument document)
+        {
+            foreach (var categoryRow in document.QuerySelectorAll("tr[data-tid|='category-row']"))
+            {
+                var id = categoryRow.GetAttribute("data-tid")?.Split("-").Last();
+                var name = categoryRow.QuerySelector("td[data-tid='category-name']")?.Text().Trim();
+                var description = categoryRow.QuerySelector("td[data-tid='category-description']")?.Text().Trim();
+
+                yield return new Category
+                {
+                    CategoryId = int.Parse(id ?? "-1"),
+                    CategoryName = name ?? string.Empty,
+                    Description = description,
+                    Picture = null
+                };
+            }
+        }
+
+        private static IEnumerable<Product> GetProducts(IDocument document)
+        {
+            foreach (var product in document.QuerySelectorAll("p[data-tid|='product-name']"))
+            {
+                yield return new Product
+                {
+                    ProductName = product.Text().Trim() ?? string.Empty
+                };
+            }
+        }
+
+        private static Category GetCategory(IDocument document)
+        {
+            return new Category
+            {
+                CategoryName = document.QuerySelector("dd[data-tid='category-name']")?
+                    .Text().Trim() ?? string.Empty,
+                Description = document.QuerySelector("dd[data-tid=\"category-description\"]")?
+                    .Text().Trim(),
+                Picture = null,
+            };
+        }
+
+        private static Category GetCategoryFromDocument(IDocument document)
+        {
+            return new Category
+            {
+                CategoryName = document.QuerySelector("input[data-tid='category-name']")?
+                    .GetAttribute("value")?.Trim() ?? string.Empty,
+                Description = document.QuerySelector("input[data-tid='category-description']")?
+                    .GetAttribute("value")?.Trim(),
+                Picture = null
+            };
         }
     }
 }
