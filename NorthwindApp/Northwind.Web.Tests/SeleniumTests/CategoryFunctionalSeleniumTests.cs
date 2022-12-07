@@ -129,6 +129,31 @@ namespace Northwind.Web.Tests.SeleniumTests
 
             userName.Should().Be($"Привествуем {helper.Email}!");
         }
+        [Test]
+        public void LogOut()
+        {
+            webDriver.Navigate().GoToUrl("http://localhost:5000/");
+            IPageObjectFactory pageFactory = new PageObjectFactory();
+
+            var mainPage = pageFactory.Create<MainPage>(webDriver);
+
+            var helper = new IdentityTestHelper();
+            helper.DeleteAllUsers();
+            helper.AddUser(helper.Email, helper.Password);
+
+            var loginPage = mainPage.GoToLogInPage();
+            loginPage.Email = helper.Email;
+            loginPage.Password = helper.Password;
+
+            mainPage = loginPage.LogInAndGoToMainPage();
+            mainPage = mainPage.LogOut();
+
+            var enterText = mainPage.EnterText;
+            enterText.Should().Be("Войти");
+
+            var registerText = mainPage.RegisterText;
+            registerText.Should().Be("Зарегистрироваться");
+        }
 
         [Test]
         public void EditProfile()

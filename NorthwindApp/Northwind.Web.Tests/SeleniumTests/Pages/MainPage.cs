@@ -28,6 +28,19 @@ namespace Northwind.Web.Tests.SeleniumTests.Pages
         {
             get{ return exitLink.Text; }
         }
+        public string RegisterText
+        {
+            get { return registerLink.Text; }
+        }
+        public string EnterText
+        {
+            get { return logInLink.Text; }
+        }
+        public MainPage LogOut()
+        {
+            exitLink.Click();
+            return PageObjectFactory.Create<MainPage>(this);
+        }
         public RegisterPage GoToRegisterPage()
         {
             registerLink.Click();
