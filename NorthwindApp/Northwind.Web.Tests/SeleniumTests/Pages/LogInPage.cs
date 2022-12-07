@@ -9,18 +9,18 @@ using SeleniumExtras.PageObjects;
 
 namespace Northwind.Web.Tests.SeleniumTests.Pages
 {
-    public class LogIn : HtmlPage
+    public class LogInPage : HtmlPage
     {
-        [FindsBy(How = How.Id, Using = "Input.Email")]
+        [FindsBy(How = How.Id, Using = "Input_Email")]
         private HtmlInput email;
 
-        [FindsBy(How = How.Id, Using = "Input.Password")]
+        [FindsBy(How = How.Id, Using = "Input_Password")]
         private HtmlInput password;
 
-        [FindsBy(How = How.CssSelector, Using = "input[type='submit']")]
+        [FindsBy(How = How.Id, Using = "login-submit")]
         private HtmlInput logInButton;
 
-        public LogIn(ISearchContext webDriverOrWrapper) : base(webDriverOrWrapper)
+        public LogInPage(ISearchContext webDriverOrWrapper) : base(webDriverOrWrapper)
         {
         }
         public string Email
@@ -33,10 +33,10 @@ namespace Northwind.Web.Tests.SeleniumTests.Pages
             get { return password.Value; }
             set { password.SendKeys(value); }
         }
-        public LogIn LogInAndGoToMainPage()
+        public MainPage LogInAndGoToMainPage()
         {
             logInButton.Click();
-            return PageObjectFactory.Create<LogIn>(this);
+            return PageObjectFactory.Create<MainPage>(this);
         }
     }
 }
