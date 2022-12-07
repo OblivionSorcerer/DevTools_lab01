@@ -61,6 +61,79 @@ namespace AddressBook.Tests
             contactWindow.Close();
         }
 
+        [Test]
+        public void AddNewContact()
+        {
+            var contact = new TestInstanceContact(GenerateContact());
+            var mainWindow = app.GetMainWindow(automation).As<MainWindow>();
+
+            var newContactWindow = mainWindow.OpenWindow("_newContactButton");
+
+            newContactWindow.NameAndEmailTabField.FormattedName.Text = contact.FormattedName;
+            newContactWindow.NameAndEmailTabField.Email.Text = contact.Email;
+            newContactWindow.PhoneTabField.Click();
+            newContactWindow.PhoneTabField.OtherCell.Text = contact.PhoneNumber;
+            newContactWindow.NotesTabField.Click();
+            newContactWindow.NotesTabField.Notes.Text = contact.Notes;
+            newContactWindow.SaveChangesButton.Click();
+
+            var addedContact = new TestInstanceContact(contactManager.GetContactCollection().First());
+
+            addedContact.Should().BeEquivalentTo(contact);
+
+            mainWindow.Close();
+        }
+        [Test]
+        public void FindContact()
+        {
+            var contacts = GenerateContacts(20).ToList();
+            var mainWindow = app.GetMainWindow(automation).As<MainWindow>();
+
+            var contactWindow = mainWindow.Contacts.First().OpenContactWindow();
+            var searchString = contacts.First().Names.First().FormattedName[0].ToString();
+            mainWindow.Searcher.Text = searchString;
+
+            Thread.Sleep(500);
+
+            mainWindow.Contacts.Where(c => c.IsOffscreen == false).Count()
+                .Should().Be(contacts.Select(c => c.Names.First())
+                .Select(n => n.FormattedName)
+                .Where(fn => fn.StartsWith(searchString)).Count());
+        }
+        [Test]
+        public void EditContact()
+        {
+            GenerateContacts(1).ToList();
+            var contact = new TestInstanceContact(GenerateContact());
+            var mainWindow = app.GetMainWindow(automation).As<MainWindow>();
+
+            var contactWindow = mainWindow.Contacts.First().OpenContactWindow();
+            contactWindow.NameAndEmailTabField.FormattedName.Text = contact.FormattedName;
+            contactWindow.NameAndEmailTabField.Email.Text = contact.Email;
+            contactWindow.PhoneTabField.Click();
+            contactWindow.PhoneTabField.OtherCell.Text = contact.PhoneNumber;
+            contactWindow.NotesTabField.Click();
+            contactWindow.NotesTabField.Notes.Text = contact.Notes;
+            contactWindow.SaveChangesButton.Click();
+
+            var editedContact = new TestInstanceContact(contactManager.GetContactCollection().First());
+
+            editedContact.Should().BeEquivalentTo(contact);
+
+            mainWindow.Close();
+        }
+        [Test]
+        public void DeleteContact()
+        {
+            GenerateContacts(1).ToList();
+            var mainWindow = app.GetMainWindow(automation).As<MainWindow>();
+
+            mainWindow.Contacts.First().Click();
+            mainWindow.OpenWindow("_deleteContactButton");
+
+            mainWindow.Contacts.Should().BeEmpty();
+        }
+
         private void ClearContacts()
         {
             var contacts = contactManager.GetContactCollection();
@@ -85,6 +158,19 @@ namespace AddressBook.Tests
                 yield return contact;
             }
 
+        }
+        private Contact GenerateContact()
+        {
+            var user = new Bogus.Person();
+
+            var contact = new Contact();
+            contact.Names.Add(new Name(user.FirstName, "", user.LastName,
+                NameCatenationOrder.GivenFamily));
+            contact.EmailAddresses.Add(user.Email);
+            contact.PhoneNumbers.Add(new PhoneNumber(user.Phone));
+            contact.Notes = user.Company.ToString() + " " + user.Website.ToString();
+
+            return contact;
         }
     }
 }
