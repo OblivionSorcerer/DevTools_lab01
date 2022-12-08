@@ -15,6 +15,8 @@ namespace AddressBook.Tests.Windows
         {
         }
 
+        public TextBox Searcher =>
+            FindFirstChild("_wordwheel").As<TextBox>();
         public Menu Menu =>
             FindFirstDescendant(cf => cf.ByControlType(ControlType.Menu))
             .AsMenu();
@@ -24,6 +26,23 @@ namespace AddressBook.Tests.Windows
                 .FindAllChildren(cf => cf.ByClassName("ListBoxItem"))?
                 .Select(e => 
                     e.As<ContactItem>()) ?? Enumerable.Empty<ContactItem>();
+
+
+        public ContactWindow OpenWindow(string buttonName)
+        {
+            Menu.FindFirstDescendant(buttonName).Click();
+
+            var windowResult = Retry.WhileNull(
+                () => Automation
+                    .GetDesktop()
+                    .FindFirstChild(cf =>
+                        cf.ByProcessId(Properties.ProcessId)
+                        .And(cf.ByName("Windows Contacts"))));
+
+            return windowResult.Success
+                ? windowResult.Result.As<ContactWindow>()
+                : null;
+        }
     }
 
     public class ContactItem : SelectionItemAutomationElement

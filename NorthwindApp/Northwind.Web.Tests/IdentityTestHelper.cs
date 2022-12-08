@@ -9,6 +9,12 @@ namespace Northwind.Web.Tests
     {
         private readonly UserManager<IdentityUser> userManager;
 
+        public readonly string Email = "miraj@ru.ru";
+        public readonly string Password = "123456aB!";
+        public readonly string NewPassword = "!Ba654321";
+        public readonly string PhoneNumber = "83428694532";
+
+
         public IdentityTestHelper(string? connectionString = null)
         {
             var sc = new ServiceCollection();
